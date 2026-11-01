@@ -105,7 +105,9 @@ middleboxes see a normal Client Hello; only the key-share part is split. Fragmen
 byte zero trips anomaly heuristics.
 
 Diagnosis is reproducible: if TLS 1.2 works and TLS 1.3 fails on the same host, the filter
-is matching the PQ key share, not the SNI.
+is matching the PQ key share, not the SNI. A longer write-up with the measurements, the dead ends
+and the diagnostic procedure lives in
+[this gist](https://gist.github.com/kirillbarashkov/b9c4ffee90631e1ea6afa22fd1216834).
 
 ## Logs
 
