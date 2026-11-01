@@ -1,0 +1,7 @@
+{
+  "id": "nodpi-supervisor",
+  "name": "NoDPI supervisor",
+  "version": "0.1.0",
+  "description": "Live view and control of the local NoDPI switch (mode, components, logs).",
+  "api": "plugin_api.py"
+}

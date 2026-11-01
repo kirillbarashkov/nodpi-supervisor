@@ -1,0 +1,13 @@
+# runtime state, never shared
+state.json
+routes.json
+runtime.json
+desired.json
+logs/
+*.log
+nodpi/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
