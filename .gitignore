@@ -11,3 +11,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# working notes for upstream issues, not published
+.drafts/
