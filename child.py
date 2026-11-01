@@ -236,7 +236,7 @@ class Child:
         self.desired = True
         self.pid = find_port_pid(self.port)
         self.started_at = time.time()
-        self._event("adopt", f"{self.name}: порт {self.port} уже занят — наблюдаю за ним")
+        self._event("adopt", f"{self.name}: port {self.port} is already in use — watching it")
         return True
 
     # ---------- lifecycle ----------
@@ -247,16 +247,16 @@ class Child:
             self.failed = False
             return True
 
-        # Остановка коммутатора не всегда доходит до NoDPI: экземпляр прошлого
-        # стека остаётся держать порт, а новый не может забиндиться и живёт
-        # фантомом, за которым «наблюдает» супервизор. Взять владельца порта
-        # под наблюдение честнее, чем плодить копию.
+        # Stopping the switch does not always reach NoDPI: an instance from a
+        # previous run keeps holding the port, the new one cannot bind and lives
+        # on as a phantom the supervisor "watches". Adopting the port owner is
+        # more honest than spawning a duplicate.
         if self.serving() and self.adopt_if_listening():
-            self._event("adopt", f"{self.name}: порт {self.port} занят прошлым экземпляром ({reason})")
+            self._event("adopt", f"{self.name}: port {self.port} is held by a previous instance ({reason})")
             return True
 
         if os.path.isabs(self.exe) and not os.path.exists(self.exe):
-            self.last_error = f"не найден файл {self.exe}"
+            self.last_error = f"executable not found: {self.exe}"
             self.failed = True
             self._event("error", self.last_error)
             return False
@@ -272,7 +272,7 @@ class Child:
         try:
             logf = open(self.log_path, "ab", buffering=0)
         except OSError as exc:
-            self.last_error = f"не открыть лог {self.log_path}: {exc}"
+            self.last_error = f"cannot open log {self.log_path}: {exc}"
             self.failed = True
             self._event("error", self.last_error)
             return False
@@ -307,7 +307,7 @@ class Child:
                 name="pump-" + self.name,
             ).start()
         except OSError as exc:
-            self.last_error = f"не запустить {self.exe}: {exc}"
+            self.last_error = f"cannot start {self.exe}: {exc}"
             self.failed = True
             self._event("error", self.last_error)
             return False
@@ -323,7 +323,7 @@ class Child:
         self.failed = False
         self._next_attempt = 0.0
         self._port_misses = 0
-        self._event("start", f"{self.name} запущен, pid {self.pid} ({reason})")
+        self._event("start", f"{self.name} started, pid {self.pid} ({reason})")
         return True
 
     def _pump_output(self, proc, path: str) -> None:
@@ -370,7 +370,7 @@ class Child:
         self.pid = 0
         self.started_at = 0.0
         if not pid or not pid_alive(pid):
-            self._event("stop", f"{self.name} уже остановлен ({reason})")
+            self._event("stop", f"{self.name} is already stopped ({reason})")
             return True
 
         # PyInstaller --onefile runs a bootloader plus the real app as its child.
@@ -407,7 +407,7 @@ class Child:
                     os.kill(pid, 9)
             except OSError:
                 pass
-        self._event("stop", f"{self.name} остановлен, pid {pid} ({reason})")
+        self._event("stop", f"{self.name} stopped, pid {pid} ({reason})")
         return True
 
     def restart(self, reason: str = "manual") -> bool:
@@ -431,7 +431,7 @@ class Child:
             # The external process we were riding on is gone; now we own it.
             self.adopted = False
             self._port_misses = 0
-            self._event("crash", f"{self.name}: внешний процесс на {self.port} пропал, поднимаю свой")
+            self._event("crash", f"{self.name}: the external process on {self.port} is gone, starting our own")
             self.start(reason="adopted gone")
             return
 
@@ -444,13 +444,13 @@ class Child:
                 # declaring it broken (PyInstaller bootloader needs a moment).
                 self._port_misses += 1
                 if self._port_misses >= 3:
-                    self.last_error = f"порт {self.port} не слушается"
+                    self.last_error = f"port {self.port} is not accepting connections"
                     self._crash(now, "port closed", kill=True)
             return
 
         if now < self._next_attempt:
             return
-        self._crash(now, f"процесс завершился (код {self.last_exit_code})")
+        self._crash(now, f"process exited (code {self.last_exit_code})")
 
     def _crash(self, now: float, why: str, kill: bool = False) -> None:
         if kill:
@@ -466,10 +466,10 @@ class Child:
         if len(self.crashes) >= MAX_CRASHES_IN_WINDOW:
             self.failed = True
             self.last_error = (
-                f"{len(self.crashes)} падений за {int(CRASH_WINDOW_S)} с; "
-                f"последнее: {why}"
+                f"{len(self.crashes)} crashes in {int(CRASH_WINDOW_S)} s; "
+                f"last one: {why}"
             )
-            self._event("failed", f"{self.name}: {self.last_error} — автоподъём остановлен")
+            self._event("failed", f"{self.name}: {self.last_error} — automatic restart disabled")
             self.pid = 0
             return
 
@@ -477,7 +477,7 @@ class Child:
         self.restarts += 1
         self._next_attempt = now + backoff
         self.last_error = why
-        self._event("crash", f"{self.name} упал ({why}), перезапуск через {backoff:.0f} с")
+        self._event("crash", f"{self.name} crashed ({why}), restarting in {backoff:.0f} s")
         self.pid = 0
         self.started_at = 0.0
         self.start(reason="auto")

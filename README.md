@@ -150,8 +150,7 @@ restart is needed. A route that fails falls back to the normal path and is logge
 the current choice marked, component health, restart buttons and the three logs. It is a
 thin facade over `lifecycle.Stack`, so it behaves exactly like the CLI.
 
-See [integrations/hermes/README.md](integrations/hermes/README.md). UI strings are in
-Russian.
+See [integrations/hermes/README.md](integrations/hermes/README.md).
 
 ## Troubleshooting
 

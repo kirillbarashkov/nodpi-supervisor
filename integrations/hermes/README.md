@@ -11,13 +11,13 @@ implementation of start/stop that could disagree with the CLI.
 
 ## What it shows
 
-- **Mode**: two radio cards, the active one outlined and marked `ВЫБРАНО`, disabled while the
-  stack is down.
+- **Mode**: two radio cards, the active one outlined and marked `SELECTED`, disabled while
+  the stack is down.
 - **Components**: switch and NoDPI with state, port, pid, uptime, automatic restart counter,
   per-component restart button.
 - **Logs**: three tabs — switch connections, `nodpi-access.log`, `nodpi-error.log`.
-- **Honest empty state**: while the first response is missing the page says "Загружаю
-  состояние…" instead of claiming the stack is stopped.
+- **Honest empty state**: while the first response is missing the page says "Loading
+  state…" instead of claiming the stack is stopped.
 
 ## Install
 
@@ -46,11 +46,10 @@ setx NODPI_SUPERVISOR_HOME "D:\AI\nodpi-supervisor"
 Without it, the backend walks three levels up from its own file, which works when you copy
 the repository as `plugins/nodpi-supervisor/dashboard/` inside the Hermes tree.
 
-Restart the app, then open **Сеть** in the sidebar.
+Restart the app, then open **Network** in the sidebar.
 
 ## Notes
 
-- UI strings are Russian; the panel was written for a Russian-speaking operator.
 - The backend starts a watchdog thread, so the switch is brought back if it dies while the
   app is open. "Stop" in the panel is respected: it writes `desired=false`.
 - Everything the panel does is also available from `net.py`, so the app is a convenience,

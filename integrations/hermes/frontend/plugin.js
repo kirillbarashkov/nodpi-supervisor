@@ -1,17 +1,18 @@
 /**
- * network-switch — страница «Сеть» в приложении Hermes.
+ * NoDPI supervisor — the "Network" page of the Hermes desktop app.
  *
- * Задача страницы: за две секунды ответить на три вопроса — работает ли стек,
- * какой режим выбран сейчас, и что нажать, чтобы изменить состояние.
+ * The page should answer three questions at a glance: is the stack alive, which
+ * mode is active right now, and what do I press to change it.
  *
- * Оформление намеренно не опирается на переменные темы вроде --accent/--border:
- * в тёмной теме приложения они могут быть не заданы, и тогда CSS-правило
- * отбрасывается целиком — карточки и кнопки становились невидимым текстом.
- * Здесь фон и линии — полупрозрачные нейтральные (читаются и в тёмной, и в
- * светлой теме), а смысловые цвета идут с явным запасным значением.
+ * Styling deliberately avoids theme variables such as --accent / --border: they
+ * may be undefined in a given theme, and an undefined variable invalidates the
+ * whole CSS declaration — cards and buttons then render as invisible text
+ * (that is exactly what happened on the first attempt). Surfaces and lines here
+ * are translucent neutrals that read on both dark and light themes, and semantic
+ * colours always carry an explicit fallback.
  *
- * Бэкенд — integrations/hermes/backend/plugin_api.py (ctx.rest('/overview')).
- * ESM без сборки: UI строится вызовами jsx(), не JSX-синтаксисом.
+ * Backend: integrations/hermes/backend/plugin_api.py (ctx.rest('/overview')).
+ * Plain ESM, no build step: the UI is built with jsx() calls, not JSX syntax.
  */
 
 import { PALETTE_AREA, ROUTES_AREA, SIDEBAR_NAV_AREA, host } from '@hermes/plugin-sdk'
@@ -53,20 +54,20 @@ function StyleTag() {
 }
 
 const TITLES = {
-  switch: 'logs/switch.log — соединения, смена режима, события надзора',
-  access: 'logs/nodpi-access.log — строка на соединение: время · метод · хост · трафик',
-  error: 'logs/nodpi-error.log — отказы и трейсбеки NoDPI'
+  switch: 'logs/switch.log — connections, mode changes, supervision events',
+  access: 'logs/nodpi-access.log — one line per connection: time · method · host · traffic',
+  error: 'logs/nodpi-error.log — NoDPI failures and tracebacks'
 }
 
 const META = {
-  running: { label: 'работает', color: C.ok, bg: C.okSoft },
-  external: { label: 'внешний', color: C.warn, bg: C.warnSoft },
-  starting: { label: 'запускается', color: C.warn, bg: C.warnSoft },
-  restarting: { label: 'перезапуск', color: C.warn, bg: C.warnSoft },
-  down: { label: 'остановлен', color: C.bad, bg: C.badSoft },
-  stopped: { label: 'остановлен', color: C.muted, bg: C.surface },
-  failed: { label: 'ошибка', color: C.bad, bg: C.badSoft },
-  unknown: { label: 'неизвестно', color: C.muted, bg: C.surface }
+  running: { label: 'running', color: C.ok, bg: C.okSoft },
+  external: { label: 'external', color: C.warn, bg: C.warnSoft },
+  starting: { label: 'starting', color: C.warn, bg: C.warnSoft },
+  restarting: { label: 'restarting', color: C.warn, bg: C.warnSoft },
+  down: { label: 'down', color: C.bad, bg: C.badSoft },
+  stopped: { label: 'stopped', color: C.muted, bg: C.surface },
+  failed: { label: 'failed', color: C.bad, bg: C.badSoft },
+  unknown: { label: 'unknown', color: C.muted, bg: C.surface }
 }
 
 function meta(state) {
@@ -75,13 +76,13 @@ function meta(state) {
 
 function fmtUptime(s) {
   if (!s || s < 0) return '—'
-  if (s < 60) return s + ' с'
+  if (s < 60) return s + 's'
   const m = Math.floor(s / 60)
-  if (m < 60) return m + ' мин'
-  return Math.floor(m / 60) + ' ч ' + String(m % 60).padStart(2, '0') + ' м'
+  if (m < 60) return m + 'm'
+  return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'
 }
 
-/* ---------------------------------------------------------------- примитивы */
+/* ---------------------------------------------------------------- primitives */
 
 function Btn({ children, onClick, disabled, kind, title }) {
   const base = {
@@ -262,7 +263,7 @@ function ModeCard({ title, desc, active, disabled, onClick }) {
                 color: C.accent,
                 bg: C.accentSoft,
                 border: C.accent,
-                children: 'ВЫБРАНО'
+                children: 'SELECTED'
               })
             : null
         ]
@@ -275,7 +276,7 @@ function ModeCard({ title, desc, active, disabled, onClick }) {
   })
 }
 
-/* ---------------------------------------------------------------- страница */
+/* ---------------------------------------------------------------- page */
 
 export function NetworkPage({ ctx }) {
   const [ov, setOv] = useState(null)
@@ -316,7 +317,7 @@ export function NetworkPage({ ctx }) {
     try {
       const res = await ctx.rest(path, { method: method || 'POST' })
       if (res && res.overview) setOv(res.overview)
-      setError(res && res.ok === false ? res.error || 'не удалось выполнить' : null)
+      setError(res && res.ok === false ? res.error || 'action failed' : null)
       await load()
     } catch (e) {
       setError(String(e))
@@ -345,13 +346,13 @@ export function NetworkPage({ ctx }) {
   const byMode = (ov && ov.by_mode) || {}
   const noop = !!busy
 
-  /* --- ещё нет ответа: не выдумываем состояние --- */
+  /* --- no answer yet: never invent a state --- */
   if (!ov) {
     return jsxs('div', {
       style: { padding: '18px 22px 26px', maxWidth: 900, color: C.fg },
       children: [
         jsx(StyleTag, {}),
-        jsx('h2', { style: { margin: '0 0 12px', fontSize: 19 }, children: 'Сеть' }),
+        jsx('h2', { style: { margin: '0 0 12px', fontSize: 19 }, children: 'Network' }),
         jsxs('div', {
           style: {
             border: '1px solid ' + C.line,
@@ -363,17 +364,17 @@ export function NetworkPage({ ctx }) {
             jsx('div', {
               style: { fontWeight: 600, fontSize: 13.5, marginBottom: 6 },
               children: error
-                ? 'Не удалось получить состояние сети'
-                : 'Загружаю состояние…'
+                ? 'Could not read the stack state'
+                : 'Loading state…'
             }),
             jsx('div', {
               style: { color: C.muted, fontSize: 12.5, whiteSpace: 'pre-wrap' },
-              children: error || 'запрос к бэкенду плагина'
+              children: error || 'request to the plugin backend'
             }),
             error
               ? jsx('div', {
                   style: { marginTop: 12 },
-                  children: jsx(Btn, { kind: 'primary', onClick: load, children: 'Повторить' })
+                  children: jsx(Btn, { kind: 'primary', onClick: load, children: 'Retry' })
                 })
               : null
           ]
@@ -382,27 +383,27 @@ export function NetworkPage({ ctx }) {
     })
   }
 
-  /* --- шапка: что происходит прямо сейчас --- */
+  /* --- header: what is happening right now --- */
   const header = jsxs('div', {
     style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
     children: [
-      jsx('h2', { style: { margin: 0, fontSize: 19 }, children: 'Сеть' }),
+      jsx('h2', { style: { margin: 0, fontSize: 19 }, children: 'Network' }),
       up
         ? jsx(Status, { state: 'running' })
         : jsx(Status, { state: 'down' }),
       jsxs('span', {
         style: { fontSize: 12, color: C.muted },
-        children: ['соединений ', String((ov && ov.connections) || 0)]
+        children: ['connections ', String((ov && ov.connections) || 0)]
       }),
       jsx('span', { style: { flex: 1 } }),
       jsx('span', {
         style: { fontSize: 11.5, color: C.muted, fontFamily: C.mono },
-        children: seen ? 'обновлено ' + seen : ''
+        children: seen ? 'updated ' + seen : ''
       })
     ]
   })
 
-  /* --- главный ответ: куда идёт трафик --- */
+  /* --- the main answer: where traffic goes --- */
   const nowLine = jsxs('div', {
     style: {
       display: 'flex',
@@ -416,10 +417,10 @@ export function NetworkPage({ ctx }) {
       fontSize: 13.5
     },
     children: [
-      jsx('span', { style: { color: C.muted }, children: 'Сейчас трафик Hermes идёт' }),
+      jsx('span', { style: { color: C.muted }, children: 'Traffic is currently going' }),
       jsx('span', {
         style: { fontWeight: 700, color: up ? C.accent : C.muted },
-        children: !up ? 'никуда — стек остановлен' : nodpi ? 'через NoDPI' : 'напрямую'
+        children: !up ? 'nowhere — the stack is stopped' : nodpi ? 'through NoDPI' : 'directly'
       }),
       jsxs('span', {
         style: { color: C.muted, fontFamily: C.mono, fontSize: 11.5, marginLeft: 'auto' },
@@ -428,24 +429,24 @@ export function NetworkPage({ ctx }) {
     ]
   })
 
-  /* --- режим --- */
+  /* --- mode --- */
   const modeSection = jsx(Section, {
-    label: 'режим',
-    hint: 'нажми на вариант, чтобы переключить',
+    label: 'mode',
+    hint: 'click a card to switch',
     style: { marginTop: 12 },
     children: jsxs('div', {
       style: { display: 'flex', gap: 10, flexWrap: 'wrap' },
       children: [
         jsx(ModeCard, {
-          title: 'Напрямую',
-          desc: 'Без обхода: быстро, но провайдер может рвать TLS 1.3.',
+          title: 'Direct',
+          desc: 'No bypass: fast, but the ISP may reset TLS 1.3.',
           active: mode === 'direct',
           disabled: !up || noop,
           onClick: () => act('mode', '/mode/direct')
         }),
         jsx(ModeCard, {
-          title: 'Через NoDPI',
-          desc: 'Фрагментация Client Hello — обход DPI на PQ-ключах.',
+          title: 'Through NoDPI',
+          desc: 'Client Hello fragmentation — gets past DPI on PQ key shares.',
           active: nodpi,
           disabled: !up || noop,
           onClick: () => act('mode', '/mode/nodpi')
@@ -454,7 +455,7 @@ export function NetworkPage({ ctx }) {
     })
   })
 
-  /* --- действия --- */
+  /* --- actions --- */
   const actions = jsxs('div', {
     style: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 10 },
     children: [
@@ -462,27 +463,27 @@ export function NetworkPage({ ctx }) {
         kind: up ? 'ghost' : 'primary',
         onClick: () => act('start', '/stack/start'),
         disabled: noop,
-        children: busy === 'start' ? 'Поднимаю…' : 'Поднять стек'
+        children: busy === 'start' ? 'Starting…' : 'Start stack'
       }),
       jsx(Btn, {
         kind: 'ghost',
         onClick: () => act('restart', '/stack/restart'),
         disabled: noop,
-        children: busy === 'restart' ? 'Перезапускаю…' : 'Перезапустить'
+        children: busy === 'restart' ? 'Restarting…' : 'Restart'
       }),
       jsx(Btn, {
         kind: 'danger',
         onClick: () => act('stop', '/stack/stop'),
         disabled: noop || !up,
-        title: 'Остановит и коммутатор, и NoDPI — Hermes останется без сети',
-        children: busy === 'stop' ? 'Останавливаю…' : 'Остановить'
+        title: 'Stops NoDPI and the switch — the client will be left without network',
+        children: busy === 'stop' ? 'Stopping…' : 'Stop'
       }),
       jsx('span', { style: { flex: 1 } }),
       jsx(Btn, {
         kind: 'subtle',
         onClick: runProbe,
         disabled: noop || !up,
-        children: busy === 'test' ? 'Проверяю…' : 'Проверить связь'
+        children: busy === 'test' ? 'Testing…' : 'Test connection'
       })
     ]
   })
@@ -496,9 +497,9 @@ export function NetworkPage({ ctx }) {
           fontFamily: C.mono
         },
         children: probe.ok
-          ? 'связь есть: opencode.ai, ' + probe.ms + ' мс, режим ' +
-            (probe.mode === 'nodpi' ? 'через NoDPI' : 'напрямую')
-          : 'связи нет: ' + (probe.error || 'ошибка')
+          ? 'connection ok: opencode.ai, ' + probe.ms + ' ms, mode ' +
+            (probe.mode === 'nodpi' ? 'through NoDPI' : 'directly')
+          : 'connection failed: ' + (probe.error || 'error')
       })
     : null
 
@@ -519,14 +520,14 @@ export function NetworkPage({ ctx }) {
           jsx('div', {
             style: { marginTop: 5, color: C.muted },
             children: up
-              ? 'подробности — в логах ниже'
-              : 'нажми «Поднять стек»: бэкенд запустит коммутатор и NoDPI сам'
+              ? 'details in the logs below'
+              : 'press "Start stack": the backend will launch the switch and NoDPI'
           })
         ]
       })
     : null
 
-  /* --- компоненты: строки переносятся, чтобы читаться и в узкой панели --- */
+  /* --- components: rows wrap so they stay readable in a narrow pane --- */
   const metaItem = (label, value, mono) => jsxs('span', {
     style: {
       fontSize: 12,
@@ -541,7 +542,7 @@ export function NetworkPage({ ctx }) {
   })
 
   const compRows = comps.length === 0
-    ? [jsx('div', { style: { color: C.muted, fontSize: 12.5 }, children: 'нет данных' }, 'empty')]
+    ? [jsx('div', { style: { color: C.muted, fontSize: 12.5 }, children: 'no data' }, 'empty')]
     : comps.map((c) => jsxs('div', {
         style: {
           display: 'flex',
@@ -557,15 +558,15 @@ export function NetworkPage({ ctx }) {
             children: c.name
           }),
           jsx(Status, { state: c.state }),
-          metaItem('порт', String(c.port), true),
+          metaItem('port', String(c.port), true),
           metaItem('pid', c.pid ? String(c.pid) : '—', true),
-          metaItem('аптайм', fmtUptime(c.uptime_s)),
+          metaItem('uptime', fmtUptime(c.uptime_s)),
           c.restarts > 0
             ? jsx(Chip, {
                 color: C.warn,
                 bg: C.warnSoft,
                 border: C.warn,
-                children: 'авто ×' + c.restarts
+                children: 'auto ×' + c.restarts
               })
             : null,
           jsx('span', { style: { flex: 1, minWidth: 8 } }),
@@ -575,14 +576,14 @@ export function NetworkPage({ ctx }) {
             onClick: () => c.name === 'NoDPI'
               ? act('restart:' + c.name, '/nodpi/restart')
               : act('restart:' + c.name, '/stack/restart'),
-            children: busy === 'restart:' + c.name ? '…' : 'перезапустить'
+            children: busy === 'restart:' + c.name ? '…' : 'restart'
           })
         ]
       }, c.name))
 
   const compSection = jsx(Section, {
-    label: 'компоненты',
-    hint: 'коммутатор держит порт Hermes и сам поднимает NoDPI',
+    label: 'components',
+    hint: 'the switch holds the client port and keeps NoDPI alive',
     style: { marginTop: 12 },
     children: jsxs('div', {
       children: [
@@ -604,7 +605,7 @@ export function NetworkPage({ ctx }) {
     })
   })
 
-  /* --- логи --- */
+  /* --- logs --- */
   const logLines = logs[logTab] || []
 
   const tab = (key, label) => jsx(Btn, {
@@ -614,17 +615,17 @@ export function NetworkPage({ ctx }) {
   })
 
   const logSection = jsx(Section, {
-    label: 'логи',
+    label: 'logs',
     style: { marginTop: 12 },
-    right: jsx(Btn, { kind: 'chip', onClick: load, children: 'обновить' }),
+    right: jsx(Btn, { kind: 'chip', onClick: load, children: 'refresh' }),
     children: jsxs('div', {
       children: [
         jsxs('div', {
           style: { display: 'flex', gap: 6, marginBottom: 9, flexWrap: 'wrap' },
           children: [
-            tab('switch', 'Коммутатор'),
-            tab('access', 'NoDPI: доступ'),
-            tab('error', 'NoDPI: ошибки')
+            tab('switch', 'Switch'),
+            tab('access', 'NoDPI: access'),
+            tab('error', 'NoDPI: errors')
           ]
         }),
         jsx('div', {
@@ -655,8 +656,8 @@ export function NetworkPage({ ctx }) {
           children: (logLines.length
             ? logLines.join('\n')
             : logTab === 'error'
-              ? 'ошибок нет'
-              : 'пока пусто')
+              ? 'no errors'
+              : 'empty')
         })
       ]
     })
@@ -687,7 +688,7 @@ export default {
       {
         id: 'nav',
         area: SIDEBAR_NAV_AREA,
-        data: { path: PATH, label: 'Сеть', codicon: 'globe' }
+        data: { path: PATH, label: 'Network', codicon: 'globe' }
       },
       {
         id: 'open',
@@ -695,7 +696,7 @@ export default {
         data: {
           id: 'network-switch.open',
           label: 'Open Network Switch',
-          keywords: ['network', 'proxy', 'nodpi', 'сеть', 'прокси'],
+          keywords: ['network', 'proxy', 'nodpi', 'dpi', 'switch'],
           run: () => host.navigate(PATH)
         }
       }
